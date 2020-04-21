@@ -20,6 +20,11 @@ enable_testing()
 set(LIB_CORE ifopt_core)
 add_subdirectory(ifopt_core)
 
+option(BUILD_CPP_NUMERICAL_SOLVERS "compile with cpp_numerical_solvers solver" ON)
+if (BUILD_CPP_NUMERICAL_SOLVERS)
+  add_subdirectory(ifopt_cppoptlib)
+endif()
+
 option(BUILD_IPOPT "compile with IPOPT solver" ON)
 if (BUILD_IPOPT)
   add_subdirectory(ifopt_ipopt)
