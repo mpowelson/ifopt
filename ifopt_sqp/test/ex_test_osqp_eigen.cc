@@ -28,6 +28,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ifopt/problem.h>
 #include <ifopt/osqp_eigen_solver.h>
+#include <ifopt/sqp_solver.h>
 #include <ifopt/test_vars_constr_cost.h>
 
 using namespace ifopt;
@@ -42,41 +43,44 @@ int main()
   nlp.PrintCurrent();
 
   // 2. choose solver and options
-  OSQPEigenSolver ipopt;
+  auto qp_solver = std::make_shared<osqp_eigen::OSQPEigenSolver>();
+  SQPSolver solver(qp_solver);
 
-  // 3 . solve
-  ipopt.Solve(nlp);
-  {
-  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-  std::cout << x.transpose() << std::endl;
-  }
+  solver.Solve(nlp);
 
-  ipopt.Solve(nlp);
-  {
-  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-  std::cout << x.transpose() << std::endl;
-  }
+//  // 3 . solve
+//  ipopt.Solve(nlp);
+//  {
+//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
+//  std::cout << x.transpose() << std::endl;
+//  }
 
-  ipopt.Solve(nlp);
-  {
-  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-  std::cout << x.transpose() << std::endl;
-  }
-  ipopt.Solve(nlp);
-  {
-  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-  std::cout << x.transpose() << std::endl;
-  }
-  ipopt.Solve(nlp);
-  {
-  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-  std::cout << x.transpose() << std::endl;
-  }
-  ipopt.Solve(nlp);
-  {
-  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-  std::cout << x.transpose() << std::endl;
-  }
+//  ipopt.Solve(nlp);
+//  {
+//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
+//  std::cout << x.transpose() << std::endl;
+//  }
+
+//  ipopt.Solve(nlp);
+//  {
+//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
+//  std::cout << x.transpose() << std::endl;
+//  }
+//  ipopt.Solve(nlp);
+//  {
+//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
+//  std::cout << x.transpose() << std::endl;
+//  }
+//  ipopt.Solve(nlp);
+//  {
+//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
+//  std::cout << x.transpose() << std::endl;
+//  }
+//  ipopt.Solve(nlp);
+//  {
+//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
+//  std::cout << x.transpose() << std::endl;
+//  }
 
 
 

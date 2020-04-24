@@ -1,48 +1,58 @@
-#include <ifopt/osqp_eigen_adapter.h>
 #include <ifopt/osqp_eigen_solver.h>
 
 #include <OsqpEigen/OsqpEigen.h>
 
-namespace ifopt
+namespace osqp_eigen
 {
-OSQPEigenSolver::OSQPEigenSolver()
+bool OSQPEigenSolver::Init(ifopt::Problem& nlp)
 {
-  // No setup
-}
-
-void OSQPEigenSolver::Solve(Problem& nlp)
-{
+  nlp_ = &nlp;
   status_ = true;
-  OsqpEigen::Solver solver;
+  solver_.clearSolver();
 
   // settings
-   solver.settings()->setVerbosity(false);
-  solver.settings()->setWarmStart(true);
+  solver_.settings()->setVerbosity(false);
+  solver_.settings()->setWarmStart(true);
 
-  Eigen::Index num_vars = nlp.GetNumberOfOptimizationVariables();
-  Eigen::Index num_cnts = nlp.GetNumberOfConstraints();
+  num_vars_ = nlp_->GetNumberOfOptimizationVariables();
+  num_cnts_ = nlp_->GetNumberOfConstraints();
 
-  // set the initial data of the QP solver
-  solver.data()->setNumberOfVariables(num_vars);
+  // set the initial data of the QP solver_
+  solver_.data()->setNumberOfVariables(num_vars_);
   // OSQP does not have variable limits, so we set constraints on them
-  solver.data()->setNumberOfConstraints(num_cnts + num_vars);
+  solver_.data()->setNumberOfConstraints(num_cnts_ + num_vars_);
+
+  return status_;
+}
+
+void OSQPEigenSolver::Solve()
+{
+  assert(nlp_->GetNumberOfConstraints() == num_cnts_);
+  assert(nlp_->GetNumberOfOptimizationVariables() == num_vars_);
+
+  // In the future it may be possible to not clear everything
+  solver_.clearSolver();
 
   ////////////////////////////////////////////////////////
-  // Leave Hessian empty for now
+  // Set the Hessian (empty for now)
+  ////////////////////////////////////////////////////////
+  solver_.data()->clearHessianMatrix();
   Eigen::SparseMatrix<double> hessian;
-  hessian.resize(num_vars, num_vars);
-  status_ &= solver.data()->setHessianMatrix(hessian);
+  hessian.resize(num_vars_, num_vars_);
+  status_ &= solver_.data()->setHessianMatrix(hessian);
 
-  /////////////////////////////////////////////////
-  // Set gradient
-  Eigen::VectorXd gradient(num_vars);
-  ifopt::ConstraintSet::Jacobian cost_jac = nlp.GetJacobianOfCosts();
+  ////////////////////////////////////////////////////////
+  // Set the gradient
+  ////////////////////////////////////////////////////////
+  Eigen::VectorXd gradient(num_vars_);
+  ifopt::ConstraintSet::Jacobian cost_jac = nlp_->GetJacobianOfCosts();
   gradient << cost_jac.toDense().transpose();
-  status_ &= solver.data()->setGradient(gradient);
+  status_ &= solver_.data()->setGradient(gradient);
 
-  /////////////////////////////////////
-  // Linearize constraints
-  Eigen::SparseMatrix<double> jac = nlp.GetJacobianOfConstraints();
+  ////////////////////////////////////////////////////////
+  // Linearize Constraints
+  ////////////////////////////////////////////////////////
+  Eigen::SparseMatrix<double> jac = nlp_->GetJacobianOfConstraints();
 
   // Create triplet list of nonzero constraints
   typedef Eigen::Triplet<double> T;
@@ -58,33 +68,35 @@ void OSQPEigenSolver::Solve(Problem& nlp)
     }
   }
   // Add a diagonal matrix for the variable limits below the actual constraints
-  for (Eigen::Index i = 0; i < num_vars; i++)
+  for (Eigen::Index i = 0; i < num_vars_; i++)
     tripletList.push_back(T(i + jac.rows(), i, 1));
 
   // Insert the triplet list into the sparse matrix
-  Eigen::SparseMatrix<double> linearMatrix(num_cnts + num_vars, num_vars);
-  linearMatrix.reserve(jac.nonZeros() + num_vars);
+  Eigen::SparseMatrix<double> linearMatrix(num_cnts_ + num_vars_, num_vars_);
+  linearMatrix.reserve(jac.nonZeros() + num_vars_);
   linearMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
 
   // Set linear constraints
-  status_ &= solver.data()->setLinearConstraintsMatrix(linearMatrix);
+  solver_.data()->clearLinearConstraintsMatrix();
+  status_ &= solver_.data()->setLinearConstraintsMatrix(linearMatrix);
 
-  ///////////////////////////////////////
+  ////////////////////////////////////////////////////////
   // Set the bounds of the constraints
-  Eigen::VectorXd cnt_bound_lower(num_cnts);
-  Eigen::VectorXd cnt_bound_upper(num_cnts);
+  ////////////////////////////////////////////////////////
+  Eigen::VectorXd cnt_bound_lower(num_cnts_);
+  Eigen::VectorXd cnt_bound_upper(num_cnts_);
 
   // Convert constraint bounds to VectorXd
-  std::vector<ifopt::Bounds> cnt_bounds = nlp.GetBoundsOnConstraints();
-  for (Eigen::Index i = 0; i < num_cnts; i++)
+  std::vector<ifopt::Bounds> cnt_bounds = nlp_->GetBoundsOnConstraints();
+  for (Eigen::Index i = 0; i < num_cnts_; i++)
   {
     cnt_bound_lower[i] = cnt_bounds[i].lower_;
     cnt_bound_upper[i] = cnt_bounds[i].upper_;
   }
 
   // Get values about which we will linearize
-  Eigen::VectorXd x_initial = nlp.GetVariableValues();
-  Eigen::VectorXd cnt_initial_value = nlp.EvaluateConstraints(x_initial.data());
+  Eigen::VectorXd x_initial = nlp_->GetVariableValues();
+  Eigen::VectorXd cnt_initial_value = nlp_->EvaluateConstraints(x_initial.data());
 
   // Our error is now represented as dy(x0)/dx * x + (y(x0) - dy(xo)/dx * x0)
   // This accounts for moving (error - dy/dx*x) term to other side of equation
@@ -92,74 +104,39 @@ void OSQPEigenSolver::Solve(Problem& nlp)
   Eigen::VectorXd linearized_cnt_upper = cnt_bound_upper - (cnt_initial_value - jac * x_initial);
 
   // Create full bounds vector
-  Eigen::VectorXd full_bounds_lower(num_cnts + num_vars);
-  Eigen::VectorXd full_bounds_upper(num_cnts + num_vars);
+  Eigen::VectorXd full_bounds_lower(num_cnts_ + num_vars_);
+  Eigen::VectorXd full_bounds_upper(num_cnts_ + num_vars_);
 
   // Insert linearized constraint bounds and check range - It might be faster to insert the whole vector and use eigen
   // to check the max/min values and only loop over the ones that need resetting
-  for (Eigen::Index i = 0; i < num_cnts; i++)
+  for (Eigen::Index i = 0; i < num_cnts_; i++)
   {
     full_bounds_lower[i] = fmax(linearized_cnt_lower[i], -OSQP_INFTY);
     full_bounds_upper[i] = fmin(linearized_cnt_lower[i], OSQP_INFTY);
   }
 
   // Set the limits on the variables
-  std::vector<ifopt::Bounds> var_bounds = nlp.GetBoundsOnOptimizationVariables();
-  for (Eigen::Index i = num_cnts; i < (num_cnts + num_vars); i++)
+  std::vector<ifopt::Bounds> var_bounds = nlp_->GetBoundsOnOptimizationVariables();
+  for (Eigen::Index i = num_cnts_; i < (num_cnts_ + num_vars_); i++)
   {
     full_bounds_lower[i] = fmax(var_bounds[i].lower_, -OSQP_INFTY);
     full_bounds_upper[i] = fmin(var_bounds[i].upper_, OSQP_INFTY);
   }
 
   // Send the full bounds vector to OSQP
-  status_ &= solver.data()->setLowerBound(full_bounds_lower);
-  status_ &= solver.data()->setUpperBound(full_bounds_upper);
+  status_ &= solver_.data()->setLowerBound(full_bounds_lower);
+  status_ &= solver_.data()->setUpperBound(full_bounds_upper);
 
-  //////////////////////////////////////
-  // instantiate the solver
-  status_ &= solver.initSolver();
+  ////////////////////////////////////////////////////////
+  // Instantiate the solver
+  ////////////////////////////////////////////////////////
+  status_ &= solver_.initSolver();
 
-
-  //////////////////////////////
-  // Solve
-  status_ &=solver.solve();
-
-  Eigen::VectorXd solution;
-  solution = solver.getSolution();
-
-  nlp.SetVariables(solution.data());
+  ////////////////////////////////////////////////////////
+  // Solve and save the solution
+  ////////////////////////////////////////////////////////
+  status_ &= solver_.solve();
+  results_ = solver_.getSolution();
 }
 
-// void OSQPEigenSolver::SetOption(const std::string& name, const std::string& value)
-//{
-//  assert(name == "jacobian_approximation");
-//  if (value == "finite_difference-values")
-//    finite_diff_ = true;
-//  else
-//  {
-//    finite_diff_ = false;
-//    assert(value == "exact");
-//  }
-//}
-
-// void OSQPEigenSolver::SetOption(const std::string& /*name*/, int /*value*/)
-//{
-//  std::cerr << "No OSQPEigenSolver options settable using this method" << std::endl;
-//}
-
-// void OSQPEigenSolver::SetOption(const std::string& /*name*/, double /*value*/)
-//{
-//  std::cerr << "No OSQPEigenSolver options settable using this method" << std::endl;
-//}
-
-// double OSQPEigenSolver::GetTotalWallclockTime()
-//{
-//  // TODO
-//}
-
- int OSQPEigenSolver::GetReturnStatus()
-{
-    return status_;
-}
-
-} /* namespace ifopt */
+}  // namespace osqp_eigen

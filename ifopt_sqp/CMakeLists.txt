@@ -8,8 +8,8 @@ find_package(OsqpEigen REQUIRED)
 set(LIB_osqp_eigen ifopt_osqp_eigen)
 # The osqp_eigen solver interface
 add_library(${LIB_osqp_eigen} SHARED
-    src/osqp_eigen_adapter.cc
     src/osqp_eigen_solver.cc
+    src/sqp_solver.cc
 )
 target_include_directories(${LIB_osqp_eigen}
   PUBLIC
