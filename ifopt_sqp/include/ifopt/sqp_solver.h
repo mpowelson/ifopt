@@ -26,13 +26,11 @@ public:
    */
   void Solve(Problem& nlp) override;
 
-  /** @brief  Get the return status for the optimization.
-   */
+  /** @brief  Get the return status for the optimization.*/
   int GetReturnStatus();
 
 private:
   int status_;
-  bool finite_diff_;
 
   QPSolver::Ptr qp_solver_;
 };

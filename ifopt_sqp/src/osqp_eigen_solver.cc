@@ -26,7 +26,6 @@ void OSQPEigenSolver::Solve()
   assert(nlp_->GetNumberOfConstraints() == num_cnts_);
   assert(nlp_->GetNumberOfOptimizationVariables() == num_vars_);
 
-  // In the future it may be possible to not clear everything
   solver_.clearSolver();
 
   ////////////////////////////////////////////////////////

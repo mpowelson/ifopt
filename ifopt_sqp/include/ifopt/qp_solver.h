@@ -5,6 +5,9 @@
 
 namespace ifopt
 {
+/**
+ * @brief Base class for Quadratic programming solver
+ */
 class QPSolver
 {
 public:
