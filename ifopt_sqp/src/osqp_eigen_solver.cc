@@ -10,10 +10,6 @@ bool OSQPEigenSolver::Init(ifopt::Problem& nlp)
   status_ = true;
   solver_.clearSolver();
 
-  // settings
-  solver_.settings()->setVerbosity(false);
-  solver_.settings()->setWarmStart(true);
-
   num_vars_ = nlp_->GetNumberOfOptimizationVariables();
   num_cnts_ = nlp_->GetNumberOfConstraints();
 

@@ -37,54 +37,23 @@ int main()
 {
   // 1. define the problem
   Problem nlp;
-  nlp.AddVariableSet  (std::make_shared<ExVariables>());
+  nlp.AddVariableSet(std::make_shared<ExVariables>());
   nlp.AddConstraintSet(std::make_shared<ExConstraint>());
-  nlp.AddCostSet      (std::make_shared<ExCost>());
+  nlp.AddCostSet(std::make_shared<ExCost>());
   nlp.PrintCurrent();
 
   // 2. choose solver and options
   auto qp_solver = std::make_shared<osqp_eigen::OSQPEigenSolver>();
   SQPSolver solver(qp_solver);
+  qp_solver->solver_.settings()->setVerbosity(false);
+  qp_solver->solver_.settings()->setWarmStart(true);
 
+  // 3. Solve
   solver.Solve(nlp);
+  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
 
-//  // 3 . solve
-//  ipopt.Solve(nlp);
-//  {
-//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-//  std::cout << x.transpose() << std::endl;
-//  }
-
-//  ipopt.Solve(nlp);
-//  {
-//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-//  std::cout << x.transpose() << std::endl;
-//  }
-
-//  ipopt.Solve(nlp);
-//  {
-//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-//  std::cout << x.transpose() << std::endl;
-//  }
-//  ipopt.Solve(nlp);
-//  {
-//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-//  std::cout << x.transpose() << std::endl;
-//  }
-//  ipopt.Solve(nlp);
-//  {
-//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-//  std::cout << x.transpose() << std::endl;
-//  }
-//  ipopt.Solve(nlp);
-//  {
-//  Eigen::VectorXd x = nlp.GetOptVariables()->GetValues();
-//  std::cout << x.transpose() << std::endl;
-//  }
-
-
-
-//  assert(1.0-eps < x(0) && x(0) < 1.0+eps);
-//  assert(0.0-eps < x(1) && x(1) < 0.0+eps);
-
+  // 4. Check the solution
+  double eps = 1e-3;  // double precision
+  assert(1.0 - eps < x(0) && x(0) < 1.0 + eps);
+  assert(0.0 - eps < x(1) && x(1) < 0.0 + eps);
 }

@@ -21,9 +21,10 @@ public:
 
   Eigen::VectorXd getResults() override { return results_; };
 
+  OsqpEigen::Solver solver_;
 private:
   ifopt::Problem* nlp_;
-  OsqpEigen::Solver solver_;
+
   Eigen::Index num_vars_;
   Eigen::Index num_cnts_;
   Eigen::VectorXd results_;
