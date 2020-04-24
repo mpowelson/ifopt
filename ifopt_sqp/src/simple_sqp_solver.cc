@@ -1,11 +1,11 @@
-#include <ifopt/sqp_solver.h>
+#include <ifopt/simple_sqp_solver.h>
 #include <iostream>
 
 namespace ifopt
 {
-SQPSolver::SQPSolver(QPSolver::Ptr qp_solver) : qp_solver_(qp_solver) {}
+SimpleSQPSolver::SimpleSQPSolver(QPSolver::Ptr qp_solver) : qp_solver_(qp_solver) {}
 
-void SQPSolver::Solve(Problem& nlp)
+void SimpleSQPSolver::Solve(Problem& nlp)
 {
   qp_solver_->Init(nlp);
   status_ = qp_solver_->getStatus();
@@ -49,5 +49,5 @@ void SQPSolver::Solve(Problem& nlp)
   }
 }
 
-int SQPSolver::GetReturnStatus() { return status_; }
+int SimpleSQPSolver::GetReturnStatus() { return status_; }
 }  // namespace ifopt

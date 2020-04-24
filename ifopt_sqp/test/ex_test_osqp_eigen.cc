@@ -28,7 +28,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ifopt/problem.h>
 #include <ifopt/osqp_eigen_solver.h>
-#include <ifopt/sqp_solver.h>
+#include <ifopt/simple_sqp_solver.h>
 #include <ifopt/test_vars_constr_cost.h>
 
 using namespace ifopt;
@@ -44,7 +44,7 @@ int main()
 
   // 2. choose solver and options
   auto qp_solver = std::make_shared<osqp_eigen::OSQPEigenSolver>();
-  SQPSolver solver(qp_solver);
+  SimpleSQPSolver solver(qp_solver);
   qp_solver->solver_.settings()->setVerbosity(false);
   qp_solver->solver_.settings()->setWarmStart(true);
 
