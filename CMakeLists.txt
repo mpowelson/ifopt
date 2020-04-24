@@ -30,6 +30,11 @@ if (BUILD_SNOPT)
   add_subdirectory(ifopt_snopt)
 endif()
 
+option(BUILD_SQP "compile with OSQP SQP solver" ON)
+if (BUILD_SQP)
+  add_subdirectory(ifopt_sqp)
+endif()
+
 
 ##################################################
 ## Install find scripts for find_package(ifopt) ##
